@@ -35,7 +35,7 @@ class MoveFilesOutputCommitter(outputPath: Path,
         val newPath = targetPathTemplate.foldLeft(fs.resolvePath(new Path("/"))) {
           case (path, partitionKey) if partitionKey.contains("$") =>
             val varsReplaced = ContainingVariable.replaceAllIn(partitionKey, mat => {
-              val partitionValue = partitions(mat.group(2))
+              val partitionValue = partitions.getOrElse(mat.group(2), throw new NoSuchElementException(s"Key '${mat.group(2)}' not found in partitions $partitions"))
               mat.group(1) + partitionValue
             })
             new Path(path, varsReplaced)
