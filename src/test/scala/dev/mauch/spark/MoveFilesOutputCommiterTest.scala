@@ -1,6 +1,7 @@
 package dev.mauch.spark
 
 import dev.mauch.spark.MoveFilesOutputCommitter.MOVE_FILES_OPTION
+import org.apache.spark.SparkException
 import org.apache.spark.sql._
 
 import java.nio.file.{Files, Path}
@@ -83,6 +84,57 @@ class MoveFilesOutputCommiterTest extends munit.FunSuite {
       }
   }
 
+  withFixtures.test("handles special characters in partition values correctly") { case (spark, tempDir) =>
+    import spark.implicits._
+    val df = Seq(
+      ("data with space", 1, "foo"),
+      ("data_with_underscore", 2, "bar"),
+      ("data-with-dash", 3, "baz")
+    ).toDF("category", "id", "value")
+    val outputPath = tempDir.resolve("test")
+    write(df.repartition(1), outputPath.toString, partitionBy = Seq("category", "id"), targetNamePattern = "$outputDirectory/cat_$category_id_$id.csv")
+
+    Seq(
+      "cat_data with space_id_1.csv",
+      "cat_data_with_underscore_id_2.csv",
+      "cat_data-with-dash_id_3.csv"
+    ).foreach { fileName =>
+      val filePath = outputPath.resolve(fileName)
+      assert(Files.exists(filePath), clue = clue(filePath))
+      assert(Files.isRegularFile(filePath), clue = clue(filePath))
+    }
+  }
+
+  withFixtures.test("handles empty partition values correctly") { case (spark, tempDir) =>
+    import spark.implicits._
+    val df = Seq(
+      ("", 1, "foo"),
+      (null, 2, "bar")
+    ).toDF("category", "id", "value")
+    val outputPath = tempDir.resolve("test")
+    write(df.repartition(1), outputPath.toString, partitionBy = Seq("category", "id"), targetNamePattern = "$outputDirectory/cat_$category_id_$id.csv")
+
+    Seq(
+      "cat___HIVE_DEFAULT_PARTITION___id_1.csv",
+      "cat___HIVE_DEFAULT_PARTITION___id_2.csv"
+    ).foreach { fileName =>
+      val filePath = outputPath.resolve(fileName)
+      assert(Files.exists(filePath), clue = clue(filePath))
+      assert(Files.isRegularFile(filePath), clue = clue(filePath))
+    }
+  }
+
+  withFixtures.test("handles non-existent partition variables in pattern") { case (spark, tempDir) =>
+    import spark.implicits._
+    val df = Seq(
+      ("data", 1, "foo")
+    ).toDF("category", "id", "value")
+    val outputPath = tempDir.resolve("test")
+
+    intercept[SparkException] {
+      write(df.repartition(1), outputPath.toString, partitionBy = Seq("category", "id"), targetNamePattern = "$outputDirectory/cat_$nonexistent.csv")
+    }
+  }
 }
 
 case class ExampleData(category: String, id: Int, value: String)

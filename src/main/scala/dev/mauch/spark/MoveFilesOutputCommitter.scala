@@ -25,7 +25,7 @@ class MoveFilesOutputCommitter(outputPath: Path,
 
       val filesInDir = scalaRemoteIterator(fs.listFiles(outputPath, true)).filterNot(_.getPath.getName == "_SUCCESS").toList
 
-      val PartitionRegex = "(\\w+)=(\\w*)".r
+      val PartitionRegex = "(\\w+)=([a-zA-Z0-9 -_]*)".r
       val ContainingVariable = "(.*?)\\$([a-zA-Z0-9]+)".r
       val renames = filesInDir.map(_.getPath).map { f =>
         val parents = Seq.iterate(f, f.depth())(_.getParent).reverse
