@@ -79,14 +79,14 @@ trait SparkModule extends Cross.Module2[String, String] with SbtModule with CiRe
 
 val scala213 = "2.13.14"
 val scala212 = "2.12.19"
-val spark24 = List("2.4.1", "2.4.7", "2.4.8")
-val spark30 = List("3.0.1", "3.0.3")
-val spark31 = List("3.1.1", "3.1.2", "3.1.3")
-val spark32 = List("3.2.4")
-val spark33 = List("3.3.4")
-val spark34 = List("3.4.1", "3.4.3")
-val spark35 = List("3.5.1")
-val sparkVersions = spark24 ++ spark30 ++ spark31 ++ spark32 ++ spark33 ++ spark34 ++ spark35
+val spark24 = "2.4.8"
+val spark30 = "3.0.3"
+val spark31 = "3.1.3"
+val spark32 = "3.2.4"
+val spark33 = "3.3.4"
+val spark34 = "3.4.3"
+val spark35 = "3.5.1"
+val sparkVersions = Seq(spark24, spark30, spark31, spark32, spark33, spark34, spark35)
 val crossMatrix =
   sparkVersions.map(spark => (scala212, spark)) ++
     sparkVersions.filter(_ >= "3.2").map(spark => (scala213, spark))
