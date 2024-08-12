@@ -55,7 +55,7 @@ trait SparkModule extends Cross.Module2[String, String] with SbtModule with CiRe
     sparkDeps
   }
 
-  object test extends SbtTests with TestModule.Munit {
+  object test extends SbtTests with TestModule.ZioTest {
 
     override def millSourcePath = super.millSourcePath
 
@@ -73,7 +73,14 @@ trait SparkModule extends Cross.Module2[String, String] with SbtModule with CiRe
       super.repositoriesTask() ++ Seq(MavenRepository("https://jitpack.io"))
     }
 
-    def ivyDeps = sparkDeps ++ Agg(ivy"org.scalameta::munit::1.0.0")
+    val zioVersion = "2.1.7"
+    val zioDeps = Agg(
+      ivy"dev.zio::zio:$zioVersion",
+      ivy"dev.zio::zio-test:$zioVersion",
+      ivy"dev.zio::zio-test-sbt:$zioVersion",
+    )
+
+    def ivyDeps = sparkDeps ++ zioDeps
   }
 }
 
