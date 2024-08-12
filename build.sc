@@ -33,7 +33,7 @@ trait SparkModule extends Cross.Module2[String, String] with SbtModule with CiRe
 
   def pomSettings = PomSettings(
     description = "A Spark extension for writing to single files",
-    organization = "dev.mauch",
+    organization = "dev.mauch.spark",
     url = "https://github.com/nightscape/spark-file-mover",
     licenses = Seq(License.`Apache-2.0`),
     versionControl = VersionControl.github("nightscape", "spark-file-mover"),
