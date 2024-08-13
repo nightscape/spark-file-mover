@@ -14,7 +14,7 @@ class MoveFilesOutputCommitter(outputPath: Path,
     super.commitJob(context)
     val moveFiles = context.getConfiguration.get(MOVE_FILES_OPTION)
     if (moveFiles != null) {
-      val fs = FileSystem.get(context.getConfiguration)
+      val fs = FileSystem.get(outputPath.toUri, context.getConfiguration)
 
       def scalaRemoteIterator[T](iter: RemoteIterator[T]): Iterator[T] = new Iterator[T] {
         override def hasNext: Boolean = iter.hasNext
