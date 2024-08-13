@@ -40,7 +40,7 @@ trait SparkModule extends Cross.Module2[String, String] with SbtModule with CiRe
     developers = Seq(Developer("nightscape", "Martin Mauch", "https://github.com/nightscape"))
   )
 
-  val hadoopVersion = "3.2.0"
+  val hadoopVersion = "3.3.2"
   val sparkDeps = Agg(
     ivy"org.apache.spark::spark-core:$sparkVersion",
     ivy"org.apache.spark::spark-sql:$sparkVersion",
@@ -78,6 +78,7 @@ trait SparkModule extends Cross.Module2[String, String] with SbtModule with CiRe
       ivy"dev.zio::zio:$zioVersion",
       ivy"dev.zio::zio-test:$zioVersion",
       ivy"dev.zio::zio-test-sbt:$zioVersion",
+      ivy"com.github.sideeffffect::zio-testcontainers:0.5.0",
     )
 
     def ivyDeps = sparkDeps ++ zioDeps
