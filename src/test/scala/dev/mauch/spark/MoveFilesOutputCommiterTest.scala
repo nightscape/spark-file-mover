@@ -3,13 +3,35 @@ package dev.mauch.spark
 import dev.mauch.spark.MoveFilesOutputCommitter.MOVE_FILES_OPTION
 import org.apache.spark.SparkException
 import org.apache.spark.sql._
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.hdfs.MiniDFSCluster
+import org.apache.hadoop.test.PathUtils
 
+import java.io.File
 import java.nio.file.{Files, Path}
 import scala.concurrent.duration.Duration
 import scala.reflect.io.Directory
 
 class MoveFilesOutputCommiterTest extends munit.FunSuite {
   override val munitTimeout: Duration = Duration(60, "s")
+
+  val withHdfs = FunFixture[MiniDFSCluster](
+    setup = { testOpts =>
+      println("Starting HDFS Cluster...")
+      val baseDir = Files.createTempDirectory(s"${getClass.getSimpleName} ${testOpts.name} ".replaceAll("[^a-zA-Z0-9]", "_"))
+      val conf = new Configuration()
+      conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, baseDir.toFile.getAbsolutePath)
+      conf.setBoolean("dfs.webhdfs.enabled", false)
+      val builder = new MiniDFSCluster.Builder(conf)
+      val hdfsCluster = builder.nameNodePort(9000).manageNameDfsDirs(true).manageDataDfsDirs(true).format(true).build()
+      hdfsCluster.waitClusterUp()
+      hdfsCluster
+    },
+    teardown = _.shutdown(true)
+  )
+
+  //def getNameNodeURI: String = "hdfs://localhost:" + hdfsCluster.getNameNodePort
+
   private val withSpark = FunFixture[SparkSession](
     setup = { _ =>
       SparkSession
@@ -30,7 +52,7 @@ class MoveFilesOutputCommiterTest extends munit.FunSuite {
       new Directory(tempDir.toFile).deleteRecursively()
     }
   )
-  private val withFixtures = FunFixture.map2(withSpark, withTempDirectory)
+  private val withFixtures = FunFixture.map3(withHdfs, withSpark, withTempDirectory)
   private val exampleData = Seq(
     ExampleData("data", 1, "foo"),
     ExampleData("data", 1, "fooagain"),
@@ -45,7 +67,7 @@ class MoveFilesOutputCommiterTest extends munit.FunSuite {
     val potentiallyPartitioned = if (partitionBy.nonEmpty) writer.partitionBy(partitionBy: _*) else writer
     potentiallyPartitioned.csv(outputPath)
   }
-  withFixtures.test("does not move files if there are multiple files in a directory") { case (spark, tempDir) =>
+  withFixtures.test("does not move files if there are multiple files in a directory") { case(hdfs, spark, tempDir) =>
     import spark.implicits._
     val df: DataFrame = exampleData.toDF()
     val outputPath = tempDir.resolve(s"test")
@@ -53,7 +75,7 @@ class MoveFilesOutputCommiterTest extends munit.FunSuite {
     assert(Files.exists(outputPath), clue = clue(outputPath))
     assert(Files.isDirectory(outputPath), clue = clue(outputPath))
   }
-  withFixtures.test("does not move files if the path doesn't have a listed file extension") { case (spark, tempDir) =>
+  withFixtures.test("does not move files if the path doesn't have a listed file extension") { case(hdfs, spark, tempDir) =>
     import spark.implicits._
     val df: DataFrame = exampleData.toDF()
     val outputPath = tempDir.resolve("test")
@@ -61,7 +83,7 @@ class MoveFilesOutputCommiterTest extends munit.FunSuite {
     assert(Files.exists(outputPath), clue = clue(outputPath))
     assert(Files.isDirectory(outputPath), clue = clue(outputPath))
   }
-  withFixtures.test("does move a single file if the path has a listed file extension") { case (spark, tempDir) =>
+  withFixtures.test("does move a single file if the path has a listed file extension") { case(hdfs, spark, tempDir) =>
     import spark.implicits._
     val df: DataFrame = exampleData.toDF()
     val outputPath = tempDir.resolve(s"test")
@@ -71,7 +93,7 @@ class MoveFilesOutputCommiterTest extends munit.FunSuite {
     assert(Files.isRegularFile(filePath), clue = clue(filePath))
   }
   withFixtures.test("does move a single file in a partition if the path has a listed file extension") {
-    case (spark, tempDir) =>
+    case(hdfs, spark, tempDir) =>
       import spark.implicits._
       val df: DataFrame = exampleData.toDF()
       val outputPath = tempDir.resolve(s"test")
@@ -84,7 +106,7 @@ class MoveFilesOutputCommiterTest extends munit.FunSuite {
       }
   }
 
-  withFixtures.test("handles special characters in partition values correctly") { case (spark, tempDir) =>
+  withFixtures.test("handles special characters in partition values correctly") { case(hdfs, spark, tempDir) =>
     import spark.implicits._
     val df = Seq(
       ("data with space", 1, "foo"),
@@ -105,7 +127,7 @@ class MoveFilesOutputCommiterTest extends munit.FunSuite {
     }
   }
 
-  withFixtures.test("handles empty partition values correctly") { case (spark, tempDir) =>
+  withFixtures.test("handles empty partition values correctly") { case(hdfs, spark, tempDir) =>
     import spark.implicits._
     val df = Seq(
       ("", 1, "foo"),
@@ -124,7 +146,7 @@ class MoveFilesOutputCommiterTest extends munit.FunSuite {
     }
   }
 
-  withFixtures.test("handles non-existent partition variables in pattern") { case (spark, tempDir) =>
+  withFixtures.test("handles non-existent partition variables in pattern") { case(hdfs, spark, tempDir) =>
     import spark.implicits._
     val df = Seq(
       ("data", 1, "foo")
