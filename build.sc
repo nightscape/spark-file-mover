@@ -40,7 +40,7 @@ trait SparkModule extends Cross.Module2[String, String] with SbtModule with CiRe
     developers = Seq(Developer("nightscape", "Martin Mauch", "https://github.com/nightscape"))
   )
 
-  val hadoopVersion = "3.2.0"
+  val hadoopVersion = "3.3.2"
   val sparkDeps = Agg(
     ivy"org.apache.spark::spark-core:$sparkVersion",
     ivy"org.apache.spark::spark-sql:$sparkVersion",
@@ -73,7 +73,12 @@ trait SparkModule extends Cross.Module2[String, String] with SbtModule with CiRe
       super.repositoriesTask() ++ Seq(MavenRepository("https://jitpack.io"))
     }
 
-    def ivyDeps = sparkDeps ++ Agg(ivy"org.scalameta::munit::1.0.0")
+    def ivyDeps = (sparkDeps ++ Agg(
+      ivy"org.scalameta::munit::1.0.0",
+      ivy"org.apache.hadoop:hadoop-hdfs:$hadoopVersion",
+      ivy"org.apache.hadoop:hadoop-minicluster:$hadoopVersion",
+      ivy"org.mockito:mockito-core:2.28.2",
+    )).map(_.exclude("org.apache.hadoop" -> "hadoop-client-api"))
   }
 }
 
