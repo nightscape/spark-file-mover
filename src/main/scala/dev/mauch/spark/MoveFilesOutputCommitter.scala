@@ -7,6 +7,7 @@ import org.apache.hadoop.mapreduce.{JobContext, TaskAttemptContext}
 
 object MoveFilesOutputCommitter {
   val MOVE_FILES_OPTION = "spark.writer.movefiles"
+  val OUTPUT_COMMITTER_CLASS = "spark.sql.sources.outputCommitterClass"
 }
 class MoveFilesOutputCommitter(outputPath: Path,
                                context: TaskAttemptContext) extends FileOutputCommitter(outputPath, context) {
@@ -40,6 +41,8 @@ class MoveFilesOutputCommitter(outputPath: Path,
               mat.group(1) + partitionValue
             })
             new Path(path, varsReplaced)
+          case (path, pathPart) =>
+            new Path(path, pathPart)
         }
         f -> newPath
       }.toMap
