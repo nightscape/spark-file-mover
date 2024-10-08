@@ -30,14 +30,12 @@ class MoveFilesOutputCommiterTest extends munit.FunSuite {
     teardown = _.shutdown(true)
   )
 
-  //def getNameNodeURI: String = "hdfs://localhost:" + hdfsCluster.getNameNodePort
-
   private val withSpark = FunFixture[SparkSession](
     setup = { _ =>
       SparkSession
         .builder()
         .master("local[*]")
-        .config("spark.sql.sources.outputCommitterClass", classOf[MoveFilesOutputCommitter].getName)
+        .config(MoveFilesOutputCommitter.OUTPUT_COMMITTER_CLASS, classOf[MoveFilesOutputCommitter].getName)
         .getOrCreate()
     },
     teardown = { spark =>
@@ -94,6 +92,15 @@ class MoveFilesOutputCommiterTest extends munit.FunSuite {
         assertFileExists(hdfs, filePath)
 
       }
+  }
+  withFixtures.test("does move files without a partition") {
+    case(hdfs, spark) =>
+      import spark.implicits._
+      val df: DataFrame = exampleData.toDF()
+      val outputPath = hdfs.getFileSystem.makeQualified(new Path("/test"))
+      write(df.repartition(1), outputPath.toString, targetNamePattern = "$outputDirectory/fixed_file_name.csv")
+      val filePath = outputPath.suffix(s"/fixed_file_name.csv")
+      assertFileExists(hdfs, filePath)
   }
 
   withFixtures.test("handles special characters in partition values correctly") { case(hdfs, spark) =>
